@@ -1,0 +1,30 @@
+{
+    "name": "OctFormer DevContainer",
+    "build": {
+      "dockerfile": "Dockerfile",
+      "context": ".."
+    },
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "terminal.integrated.defaultProfile.linux": "bash",
+                "editor.formatOnSave": true
+            },
+            "extensions": [
+                "ms-python.python",
+                "tatsy.vscode-3d-preview"
+            ]
+        }
+    },
+    "postCreateCommand": "source /opt/conda/etc/profile.d/conda.sh && conda activate octformer",
+    "remoteUser": "root",
+    "features": {
+    },
+    "mounts": [
+        "source=/workspace/octformer,target=/workspace/octformer,type=bind,consistency=cached"
+    ],
+    "runArgs": [
+        "--gpus", "all",
+        "--ipc=host"
+    ]
+}
