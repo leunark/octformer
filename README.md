@@ -24,7 +24,6 @@ ACM Transactions on Graphics (SIGGRAPH), 42(4), 2023
 
 The code has been tested on Ubuntu 20.04 with 4 Nvidia 3090 GPUs (24GB memory).
 
-
 1. Install [Conda](https://www.anaconda.com/) and create a `Conda` environment.
 
     ```bash
@@ -52,22 +51,6 @@ The code has been tested on Ubuntu 20.04 with 4 Nvidia 3090 GPUs (24GB memory).
     pip install ./dwconv
     ```
 
-    **Note:**\
-    A cuda compiler nvcc is required. You might need to install it before...
-    ```bash
-    conda install -c conda-forge cudatoolkit-dev=11.3
-    ```
-
-    Cuda 11.3 supports up to g++<10.0.0. Therefore, e.g if you're on Ubuntu 22, install the correct c++ compiler...
-    ```bash
-    conda install -c conda-forge gxx_linux-64==9.5.0
-    ```
-
-    Additionally, crpyto lib might be needed...
-    ```bash
-    conda install -c conda-forge libxcrypt
-    ```
-
 5. To run the detection experiments,
    [mmdetection3d](https://github.com/open-mmlab/mmdetection3d) is required.
    And the code is tested with `mmdet3d==1.0.0rc5`. Run the following commands
@@ -88,12 +71,6 @@ The code has been tested on Ubuntu 20.04 with 4 Nvidia 3090 GPUs (24GB memory).
     pip install -e .
     ```
 
-### Using the Devcontainer
-This project includes a `.devcontainer` configuration for quick setup with [VS Code](https://code.visualstudio.com/).
-1. Install [Docker](https://www.docker.com/) and the [Remote - Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) VS Code extension.
-2. Reopen the folder in a container:
-    - Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on macOS), and run `Remote-Containers: Reopen in Container`.
-3. Start coding in the pre-configured environment!
 
 ## 2. ScanNet Segmentation
 

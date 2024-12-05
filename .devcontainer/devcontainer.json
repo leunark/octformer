@@ -21,7 +21,7 @@
     "features": {
     },
     "mounts": [
-        "source=/workspace/octformer,target=/workspace/octformer,type=bind,consistency=cached"
+        "source=/workspace/octformer,target=/workspace/octformer,type=bind"
     ],
     "runArgs": [
         "--gpus", "all",
