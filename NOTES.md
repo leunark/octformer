@@ -24,6 +24,23 @@ This project includes a `.devcontainer` configuration for quick setup with [VS C
     - Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on macOS), and run `Remote-Containers: Reopen in Container`.
 3. Start coding in the pre-configured environment!
 
+### Train in the container in the background:
+Run the training in the docker container as daemon.
+```bash
+docker run --gpus all --rm -dit -v $(pwd):/workspace/octformer --ipc=host --name octformer_container octformer bash -c "
+  source /opt/conda/etc/profile.d/conda.sh &&
+  conda activate octformer &&
+  conda info &&
+  nvidia-smi &&
+  pip install -r requirements.txt &&
+  export NCCL_P2P_DISABLE=1 &&
+  python scripts/run_seg_scannet.py --gpu 0,1,2,3 --alias scannet --port 10001
+"
+```
+While the container is running in the background, you can see the logs with `docker logs -f octformer_container`.
+
+***Note: For cleaner logs, set `SOLVER.progress_bar False` in `scripts/run_seg_scannet.py`.***
+
 **Running the container**:
 - Running the container requires you to attach the gpus i.e. `--gpus all`
 - Enough shared memory has to be provided e.g. with `--shm-size=64g` or preferrred `--ipc=host` for all
@@ -118,3 +135,77 @@ export NCCL_P2P_DISABLE=1
     - Disabling P2P (NCCL_P2P_DISABLE=1) worked because of the lack of direct inter-GPU paths in your system.
 4. Restrict Network Interfaces:
     - Setting NCCL_SOCKET_IFNAME ensured no conflicts from virtual interfaces like docker0 or virbr0.
+
+
+## ScanNet
+To minimize data usage while ensuring you have the necessary files for 3D semantic segmentation using ScanNet, follow these guidelines:
+
+### Required Files
+
+For 3D semantic segmentation, you only need the following files:
+1.	Point Cloud Files (_vh_clean_2.ply):
+    - Contains the 3D point cloud data for each scene.
+    - This is the primary input for 3D segmentation tasks.
+2.	Label Files (_vh_clean_2.labels.ply):
+    - Contains per-point semantic labels for the 20 or 200 class categories.
+3.	Segmentation Metadata (_vh_clean_2.0.010000.segs.json):
+    - Provides information for segment-level annotations.
+4.	Aggregation Metadata (_vh_clean.aggregation.json):
+    - Provides mapping between segments and object categories.
+5.	Label Mapping (scannetv2-labels.combined.tsv):
+    - Maps raw category names to the 20 or 200 target class labels.
+
+### Exclusion of Non-Essential Files
+
+You can skip the following files to save space:
+- 2D Data:
+- _2d-instance.zip
+- _2d-instance-filt.zip
+- _2d-label.zip
+- _2d-label-filt.zip
+- Raw Sensor Data (.sens):
+- Unless you need raw RGB-D sequences, .sens files can be excluded.
+- Visualization Files (_vh_clean.ply):
+- These are simpler versions of the 3D point clouds, unnecessary for semantic segmentation.
+- Preprocessed Frames:
+- Avoid scannet_frames_25k.zip or scannet_frames_test.zip if not using pre-extracted image sequences.
+
+### Command to Download Only Necessary Files
+
+You can specify the exact file types to download using the --type argument in the download script. For example:
+```bash
+python download-scannet.py -o ./data/ScanNet --type _vh_clean_2.ply
+python download-scannet.py -o ./data/ScanNet --type _vh_clean_2.labels.ply
+python download-scannet.py -o ./data/ScanNet --type _vh_clean_2.0.010000.segs.json
+python download-scannet.py -o ./data/ScanNet --type _vh_clean.aggregation.json
+python download-scannet.py -o ./data/ScanNet --label_map
+```
+
+This setup ensures you only download the files needed for 3D segmentation.
+
+### Directory Structure
+
+After downloading, your dataset directory should look like this:
+```
+scannet_data/
+  scans/
+    <scene_id>/
+      *_vh_clean_2.ply
+      *_vh_clean_2.labels.ply
+      *_vh_clean_2.0.010000.segs.json
+      *_vh_clean.aggregation.json
+  tasks/
+    scannetv2-labels.combined.tsv
+```
+
+***Total Estimate: ~21 GB (significantly smaller than the full 1.2 TB)***
+***After pre-processing: ~9.5 GB***
+
+### Certificate Error
+If an issue persists and you’re working in a trusted environment (e.g., testing or internal networks), you can disable SSL certificate verification to bypass it. (
+    
+Add to `download-scannet.py`:
+```python
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
+```
