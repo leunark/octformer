@@ -78,13 +78,10 @@ RUN source /opt/conda/etc/profile.d/conda.sh && \
 # Set the final working directory
 WORKDIR /workspace/octformer
 
-# Source conda.sh and activate the environment in .bashrc
-RUN echo "source /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc && \
-    echo "conda activate ${CONDA_ENV_NAME}" >> ~/.bashrc
+# Final modifications at the end of the Dockerfile
+SHELL ["/bin/bash", "-c"]
 
-# Default command
+# Activate conda environment by default
+ENTRYPOINT ["/bin/bash", "-c", "source /opt/conda/etc/profile.d/conda.sh && conda activate octformer && exec \"$@\"", "bash"]
+
 CMD ["/bin/bash"]
-
-# How to:
-# docker build -t octformer .
-# docker run --gpus all --rm -it -v $(pwd)/data:/workspace/octformer/data --ipc=host octformer bash

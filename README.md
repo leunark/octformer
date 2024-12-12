@@ -112,7 +112,7 @@ The code has been tested on Ubuntu 20.04 with 4 Nvidia 3090 GPUs (24GB memory).
 
     ```bash
     python tools/seg_scannet.py --run process_scannet --path_in <scannet_folder>  \
-           --path_out data/scanet200.npz  --align_axis  --scannet200
+           --path_out data/scannet200.npz  --align_axis  --scannet200
     ```
 
 2. **Train**: Run the following command to train the network with 4 GPUs. The
