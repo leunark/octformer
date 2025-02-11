@@ -113,8 +113,13 @@ ssl._create_default_https_context = ssl._create_unverified_context
 
 ### Fast compression
 To move files from machine to machine, a fast approach is needed to archive files.
+Make sure zstd is intalled with `apt-get update && apt-get install -y zstd`
 ```bash
 tar --use-compress-program=zstd -cvf scannet.tar.gz data/ScanNet
+```
+And this is how to extract it again.
+```bash
+tar --use-compress-program=zstd -xvf scannet.tar.gz
 ```
 
 ### ScanNet in Docker

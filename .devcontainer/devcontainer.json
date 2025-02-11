@@ -16,8 +16,7 @@
             ]
         }
     },
-    "postCreateCommand": "source /opt/conda/etc/profile.d/conda.sh && conda activate octformer",
-    "remoteUser": "root",
+    "postCreateCommand": "echo Octformer Dev Container is ready!",
     "features": {
     },
     "mounts": [
