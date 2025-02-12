@@ -37,7 +37,7 @@ def execute_command(cmds):
   if script == "segmentation":
     SegSolver.main()
   elif script == "seg_scannet":
-    eval('%s()' % args.run)
+    eval('%s()' % argv[2])
 
 
 def train():

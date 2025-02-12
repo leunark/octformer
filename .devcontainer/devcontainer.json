@@ -20,7 +20,7 @@
     "features": {
     },
     "mounts": [
-        "source=/workspace/octformer,target=/workspace/octformer,type=bind"
+        "source=${localWorkspaceFolder},target=/workspace/octformer,type=bind"
     ],
     "runArgs": [
         "--gpus", "all",
