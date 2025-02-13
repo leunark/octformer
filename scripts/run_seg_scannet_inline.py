@@ -92,7 +92,7 @@ def validate():
       'SOLVER.alias val_{}'.format(args.alias),
       'SOLVER.ckpt {}'.format(ckpt),
       'DATA.test.batch_size 1',
-      'DATA.test.distort True',]
+      'DATA.test.distort False',]
   execute_command(cmds)
 
   # map the probabilities to labels
