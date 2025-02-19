@@ -12,7 +12,7 @@ SOLVER:
   best_val: max:accu
 
   logdir: logs/m40/octformer_d6
-  max_epoch: 200
+  max_epoch: 205
   test_every_epoch: 5
   log_per_iter: 20
 
