@@ -260,7 +260,10 @@ class OctreeCrossAttention(torch.nn.Module):
         self.rpe = RPE(patch_size, num_heads, dilation) if use_rpe else None
 
     def apply_rpe(self, attn, rel_pos):
+       
+       
        if self.use_rpe:
+
         attn = attn + self.rpe(rel_pos)
        return attn   
 
@@ -270,26 +273,17 @@ class OctreeCrossAttention(torch.nn.Module):
         C = self.dim
         D = self.dilation
 
-        # Reshape before padding
-        N_q = (q_data.size(0) + K - 1) // K * K
-        N_kv = (kv_data.size(0) + K - 1) // K * K
-        N = max(N_q, N_kv)
+        #make both tensors same size
+        N = min(q_data.size(0), kv_data.size(0))
+        q_data = q_data[:N]
+        kv_data = kv_data[:N]
 
-        # Pad both tensors
-        if q_data.size(0) < N:
-            pad_q = q_data.new_zeros(N - q_data.size(0), C)
-            q_data = torch.cat([q_data, pad_q], dim=0)
-        if kv_data.size(0) < N:
-            pad_kv = kv_data.new_zeros(N - kv_data.size(0), C)
-            kv_data = torch.cat([kv_data, pad_kv], dim=0)
-
-
-        #calculate padding for patches
+        #calculate padding
         total_elements = K * D
         num_blocks = (N + total_elements - 1) // total_elements
         pad_len = num_blocks * total_elements - N
 
-        #pad inputs for patches
+        #pad inputs
         if pad_len > 0:
             pad = q_data.new_zeros(pad_len, C)
             q_data = torch.cat([q_data, pad], dim=0)
@@ -323,9 +317,11 @@ class OctreeCrossAttention(torch.nn.Module):
         #get output
         out = (attn @ v).transpose(1, 2).reshape(-1, C)
         out = out[:N]
+        
         out = self.proj(out)
         out = self.proj_drop(out)
-        return out
+        return out    
+
 
 
 class OctFormerBlock(torch.nn.Module):
@@ -356,34 +352,54 @@ class OctFormerBlock(torch.nn.Module):
 
     def forward(self, data: torch.Tensor, cross_data: Optional[torch.Tensor], 
                 octree: OctreeT, depth: int):
-        orig_size = data.size(0)  # Store original size
-        
         #self attention
         x = data + self.cpe(data, octree, depth)
         x = x + self.drop_path(self.self_attn(self.norm1(x), octree, depth), octree, depth)
         
         #cross attention if enabled
         if self.cross_attn is not None and cross_data is not None:
-            cross_out = self.cross_attn(self.norm_cross(x), cross_data, octree, depth)
-            # Ensure output size matches input
-            cross_out = cross_out[:orig_size]
-            x = x + self.drop_path(cross_out, octree, depth)
+            x = x + self.drop_path(
+                self.cross_attn(self.norm_cross(x), cross_data, octree, depth), 
+                octree, depth)
         
         # FFN
-        ffn_out = self.mlp(self.norm2(x))
-        ffn_out = ffn_out[:orig_size]  # Ensure consistent size
-        x = x + self.drop_path(ffn_out, octree, depth)
-        return x
+        x = x + self.drop_path(self.mlp(self.norm2(x)), octree, depth)
+        return x    
+
+class OctFormerBlock(torch.nn.Module):
+
+  def __init__(self, dim: int, num_heads: int, patch_size: int = 32,
+               dilation: int = 0, mlp_ratio: float = 4.0, qkv_bias: bool = True,
+               qk_scale: Optional[float] = None, attn_drop: float = 0.0,
+               proj_drop: float = 0.0, drop_path: float = 0.0, nempty: bool = True,
+               activation: torch.nn.Module = torch.nn.GELU, **kwargs):
+    super().__init__()
+    self.norm1 = torch.nn.LayerNorm(dim)
+    self.attention = OctreeAttention(dim, patch_size, num_heads, qkv_bias,
+                                     qk_scale, attn_drop, proj_drop, dilation)
+    self.norm2 = torch.nn.LayerNorm(dim)
+    self.mlp = MLP(dim, int(dim * mlp_ratio), dim, activation, proj_drop)
+    self.drop_path = ocnn.nn.OctreeDropPath(drop_path, nempty)
+    self.cpe = OctreeDWConvBn(dim, nempty=nempty)
+
+  def forward(self, data: torch.Tensor, octree: OctreeT, depth: int):
+    data = self.cpe(data, octree, depth) + data
+    attn = self.attention(self.norm1(data), octree, depth)
+    data = data + self.drop_path(attn, octree, depth)
+    ffn = self.mlp(self.norm2(data))
+    data = data + self.drop_path(ffn, octree, depth)
+    return data
+
 
 class OctFormerStage(torch.nn.Module):
 
   def __init__(self, dim: int, num_heads: int, patch_size: int = 32,
-                dilation: int = 0, mlp_ratio: float = 4.0, qkv_bias: bool = True,
-                qk_scale: Optional[float] = None, attn_drop: float = 0.0,
-                proj_drop: float = 0.0, drop_path: float = 0.0, nempty: bool = True,
-                activation: torch.nn.Module = torch.nn.GELU, interval: int = 6,
-                use_checkpoint: bool = True, num_blocks: int = 2,
-                octformer_block=OctFormerBlock, **kwargs):    
+               dilation: int = 0, mlp_ratio: float = 4.0, qkv_bias: bool = True,
+               qk_scale: Optional[float] = None, attn_drop: float = 0.0,
+               proj_drop: float = 0.0, drop_path: float = 0.0, nempty: bool = True,
+               activation: torch.nn.Module = torch.nn.GELU, interval: int = 6,
+               use_checkpoint: bool = True, num_blocks: int = 2,
+               octformer_block=OctFormerBlock, **kwargs):
     super().__init__()
     self.num_blocks = num_blocks
     self.use_checkpoint = use_checkpoint
@@ -401,14 +417,16 @@ class OctFormerStage(torch.nn.Module):
     #     torch.nn.BatchNorm1d(dim) for _ in range(self.num_norms)])
 
   def forward(self, data: torch.Tensor, octree: OctreeT, depth: int):
-      prev_feature = None  # Initialize prev_feature for first block
-      for i in range(self.num_blocks):
-          if self.use_checkpoint and self.training:
-              data = checkpoint(self.blocks[i], data, prev_feature, octree, depth)
-          else:
-              data = self.blocks[i](data, prev_feature, octree, depth)
-          prev_feature = data  # Store current output for next block's cross attention
-      return data
+    for i in range(self.num_blocks):
+      if self.use_checkpoint and self.training:
+        data = checkpoint(self.blocks[i], data, octree, depth)
+      else:
+        data = self.blocks[i](data, octree, depth)
+      # if i % self.interval == 0 and i != 0:
+      #   data = self.norms[(i - 1) // self.interval](data)
+    return data
+
+
 class PatchEmbed(torch.nn.Module):
 
   def __init__(self, in_channels: int = 3, dim: int = 96, num_down: int = 2,
@@ -452,51 +470,41 @@ class Downsample(torch.nn.Module):
 
 
 class OctFormer(torch.nn.Module):
-    def __init__(self, in_channels: int,
-                 channels: List[int] = [96, 192, 384, 384],
-                 num_blocks: List[int] = [2, 2, 18, 2],
-                 num_heads: List[int] = [6, 12, 24, 24],
-                 patch_size: int = 26, dilation: int = 4, drop_path: float = 0.5,
-                 nempty: bool = True, stem_down: int = 2, **kwargs):
-        super().__init__()
-        self.patch_size = patch_size
-        self.dilation = dilation
-        self.nempty = nempty
-        self.num_stages = len(num_blocks)
-        self.stem_down = stem_down
-        drop_ratio = torch.linspace(0, drop_path, sum(num_blocks)).tolist()
 
-        self.patch_embed = PatchEmbed(in_channels, channels[0], stem_down, nempty)
-        
-        # Updated stage creation to include cross attention
-        self.layers = torch.nn.ModuleList([OctFormerStage(
-            dim=channels[i], 
-            num_heads=num_heads[i], 
-            patch_size=patch_size,
-            drop_path=drop_ratio[sum(num_blocks[:i]):sum(num_blocks[:i+1])],
-            dilation=dilation, 
-            nempty=nempty, 
-            num_blocks=num_blocks[i],
-            octformer_block=lambda **kwargs: OctFormerBlock(
-                use_cross_attn=True, **kwargs))  # Enable cross attention
-            for i in range(self.num_stages)])
-            
-        self.downsamples = torch.nn.ModuleList([Downsample(
-            channels[i], channels[i + 1], kernel_size=[2],
-            nempty=nempty) for i in range(self.num_stages - 1)])
+  def __init__(self, in_channels: int,
+               channels: List[int] = [96, 192, 384, 384],
+               num_blocks: List[int] = [2, 2, 18, 2],
+               num_heads: List[int] = [6, 12, 24, 24],
+               patch_size: int = 26, dilation: int = 4, drop_path: float = 0.5,
+               nempty: bool = True, stem_down: int = 2, **kwargs):
+    super().__init__()
+    self.patch_size = patch_size
+    self.dilation = dilation
+    self.nempty = nempty
+    self.num_stages = len(num_blocks)
+    self.stem_down = stem_down
+    drop_ratio = torch.linspace(0, drop_path, sum(num_blocks)).tolist()
 
-    def forward(self, data: torch.Tensor, octree: Octree, depth: int):
-        data = self.patch_embed(data, octree, depth)
-        depth = depth - self.stem_down   # current octree depth
-        octree = OctreeT(octree, self.patch_size, self.dilation, self.nempty,
-                        max_depth=depth, start_depth=depth-self.num_stages+1)
-        features = {}
-        
-        for i in range(self.num_stages):
-            depth_i = depth - i
-            data = self.layers[i](data, octree, depth_i)  # Remove prev_feature here
-            features[depth_i] = data
-            if i < self.num_stages - 1:
-                data = self.downsamples[i](data, octree, depth_i)
-        
-        return features
+    self.patch_embed = PatchEmbed(in_channels, channels[0], stem_down, nempty)
+    self.layers = torch.nn.ModuleList([OctFormerStage(
+        dim=channels[i], num_heads=num_heads[i], patch_size=patch_size,
+        drop_path=drop_ratio[sum(num_blocks[:i]):sum(num_blocks[:i+1])],
+        dilation=dilation, nempty=nempty, num_blocks=num_blocks[i],)
+        for i in range(self.num_stages)])
+    self.downsamples = torch.nn.ModuleList([Downsample(
+        channels[i], channels[i + 1], kernel_size=[2],
+        nempty=nempty) for i in range(self.num_stages - 1)])
+
+  def forward(self, data: torch.Tensor, octree: Octree, depth: int):
+    data = self.patch_embed(data, octree, depth)
+    depth = depth - self.stem_down   # current octree depth
+    octree = OctreeT(octree, self.patch_size, self.dilation, self.nempty,
+                     max_depth=depth, start_depth=depth-self.num_stages+1)
+    features = {}
+    for i in range(self.num_stages):
+      depth_i = depth - i
+      data = self.layers[i](data, octree, depth_i)
+      features[depth_i] = data
+      if i < self.num_stages - 1:
+        data = self.downsamples[i](data, octree, depth_i)
+    return features
