@@ -38,8 +38,6 @@ def process_scannet():
       f.write(f"{file_name} 0\n")
       print(f"Preprocessed file {file_name}")
 
-
-
 def main():
   process_scannet()
 
