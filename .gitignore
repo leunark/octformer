@@ -10,3 +10,19 @@ logs
 dwconv
 mmdetection3d
 debug
+
+# Checkpoints and logs
+logs/
+*.pth
+*.pt
+
+# Data
+data/
+*.npz
+*.ply
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+.vscode/
