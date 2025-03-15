@@ -93,8 +93,20 @@ The code has been tested on Ubuntu 20.04 with 4 Nvidia 3090 GPUs (24GB memory).
     ```bash
     python scripts/run_seg_scannet.py --gpu 0,1,2,3 --alias scannet --port 10001
     ```
+    **Train with cross attention. Run the following command to train the network with cross attention
+    ```bash
+    python scripts/run_seg_scannet_crossattn.py --gpu 0 --alias scannet_crossattn --port 10001
+    ```
+    **Run the evaluation on the test set with cross attention
+    ```bash
+    python scripts/run_seg_scannet_crossattn.py --run test --alias scannet_crossattn
+    ```
+    **Run the evaluation on the validation set using cross attention
+    ```bash
+    python scripts/run_seg_scannet_crossattn.py --run validate --alias scannet_crossattn
+    ```
 
-3. **Evaluate**: Run the following command to get the per-point predictions for
+4. **Evaluate**: Run the following command to get the per-point predictions for
    the validation dataset with a voting strategy. And after voting, the mIoU is
    76.3 on the validation dataset.
 
