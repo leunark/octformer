@@ -5,8 +5,11 @@
 # Written by Peng-Shuai Wang
 # --------------------------------------------------------
 
-from .octformer import OctFormer
+# Import original modules
+from .octformer import OctFormer, OctreeT, MLP, RPE, OctreeDWConvBn
 from .octformerseg import OctFormerSeg
 from .octformercls import OctFormerCls
+
+# Import cross attention modules
 from .octformer_crossattn import OctreeCrossAttention, OctFormerCrossBlock
 from .octformerseg_crossattn import SegHeaderCrossAttn, OctFormerSegCrossAttn
