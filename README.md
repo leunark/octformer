@@ -93,15 +93,15 @@ The code has been tested on Ubuntu 20.04 with 4 Nvidia 3090 GPUs (24GB memory).
     ```bash
     python scripts/run_seg_scannet.py --gpu 0,1,2,3 --alias scannet --port 10001
     ```
-    **Train with cross attention. Run the following command to train the network with cross attention
+3.  **Train with cross attention**. Run the following command to train the network with cross attention
     ```bash
     python scripts/run_seg_scannet_crossattn.py --gpu 0 --alias scannet_crossattn --port 10001
     ```
-    **Run the evaluation on the test set with cross attention
+    **Run** the evaluation on the test set with cross attention
     ```bash
     python scripts/run_seg_scannet_crossattn.py --run test --alias scannet_crossattn
     ```
-    **Run the evaluation on the validation set using cross attention
+    **Run** the evaluation on the validation set using cross attention
     ```bash
     python scripts/run_seg_scannet_crossattn.py --run validate --alias scannet_crossattn
     ```
