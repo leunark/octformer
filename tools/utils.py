@@ -9,7 +9,8 @@ import os
 import numpy as np
 from typing import Optional
 from plyfile import PlyData, PlyElement
-
+import torch
+import pypcd4
 
 def save_points_to_ply(filename: str, points: np.ndarray,
                        normals: Optional[np.ndarray] = None,
@@ -38,3 +39,10 @@ def save_points_to_ply(filename: str, points: np.ndarray,
   if not os.path.exists(folder):
     os.makedirs(folder)
   PlyData([el], text).write(filename)
+
+
+def save_points_to_pcd(points: torch.Tensor, path: str = "points.pcd"):
+  points: np.ndarray = points.points.detach().cpu().numpy()
+  points = points[:, [0, 2, 1]]
+  pc = pypcd4.PointCloud.from_xyz_points(points)
+  pc.save(path)

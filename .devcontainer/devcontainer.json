@@ -1,0 +1,29 @@
+{
+    "name": "OctFormer DevContainer",
+    "build": {
+      "dockerfile": "Dockerfile",
+      "context": ".."
+    },
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "terminal.integrated.defaultProfile.linux": "bash",
+                "editor.formatOnSave": true
+            },
+            "extensions": [
+                "ms-python.python",
+                "tatsy.vscode-3d-preview"
+            ]
+        }
+    },
+    "postCreateCommand": "echo Octformer Dev Container is ready!",
+    "features": {
+    },
+    "mounts": [
+        "source=${localWorkspaceFolder},target=/workspace/octformer,type=bind"
+    ],
+    "runArgs": [
+        "--gpus", "all",
+        "--ipc=host"
+    ]
+}

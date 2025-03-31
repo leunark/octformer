@@ -14,7 +14,9 @@ import pandas as pd
 import numpy as np
 from tqdm import tqdm
 from plyfile import PlyData, PlyElement
-
+import ssl
+# Disable SSL verification (not recommended for production)
+ssl._create_default_https_context = ssl._create_unverified_context
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--path_in', type=str, default='data/scannet.ply/train')

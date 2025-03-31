@@ -101,6 +101,11 @@ class SegSolver(Solver):
 
   def eval_step(self, batch):
     batch = self.process_batch(batch, self.FLAGS.DATA.test)
+    
+    # Save points for debugging
+    #from tools.utils import save_points_to_pcd
+    #save_points_to_pcd(batch["points"])
+
     with torch.no_grad():
       logit, _ = self.model_forward(batch)
     prob = torch.nn.functional.softmax(logit, dim=1)

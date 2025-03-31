@@ -9,10 +9,13 @@ import os
 import math
 import wget
 import zipfile
+import numpy as np
+# trimesh requires a version of networkx where np.int is accessed but removed in numpy 1.24
+# either set it here or set in the requirements.txt numpy<1.24 it
+np.int = np.int64
 import trimesh
 import argparse
 import trimesh.sample
-import numpy as np
 import cyminiball
 from tqdm import tqdm
 
