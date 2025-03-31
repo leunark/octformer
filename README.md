@@ -1,14 +1,14 @@
-# NOTES
-Extension of the README.md for documentation purposes.
+# OctFormer: Octree-based Transformers for 3D Point Clouds
+Extension of the original README.md (now README_ORIGINAL.md) for documentation purposes.
 
-## Docker
+## 1. Setup Environment - Docker
 
 ### Using Devcontainer (Recommended)
 This project includes a `.devcontainer` configuration for quick setup with [VS Code](https://code.visualstudio.com/).
 1. Install [Docker](https://www.docker.com/) and the [Remote - Containers](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) VS Code extension.
 2. Reopen the folder in a container:
     - Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on macOS), and run `Remote-Containers: Reopen in Container`.
-3. Start coding in the pre-configured environment!
+3. Start training in the pre-configured environment, by following with ScanNet data preparation and then training & evaluation.
 
 ### Manually Build & Run
 **Run the container**:
@@ -19,7 +19,7 @@ docker build -f .devcontainer/Dockerfile -t octformer .
 docker run --gpus all --rm -it -v $(pwd):/workspace/octformer --ipc=host octformer bash
 ```
 
-## ScanNet
+## 2. Data Preparation - ScanNet
 To minimize data usage while ensuring you have the necessary files for 3D semantic segmentation using ScanNet, follow these guidelines:
 
 ### Required Files
@@ -86,7 +86,7 @@ scannet_data/
 ***After pre-processing: ~9.5 GB***
 
 ### Certificate Error
-If an issue persists and you’re working in a trusted environment (e.g., testing or internal networks), you can disable SSL certificate verification to bypass it. (
+If an issue persists and you’re working in a trusted environment (e.g., testing or internal networks), you can disable SSL certificate verification to bypass it.
     
 Add to `download-scannet.py`:
 ```python
@@ -94,49 +94,38 @@ import ssl
 ssl._create_default_https_context = ssl._create_unverified_context
 ```
 
-### Fast compression
-To move files from machine to machine, a fast approach is needed to archive files.
-Make sure zstd is intalled with `apt-get update && apt-get install -y zstd`
-```bash
-tar --use-compress-program=zstd -cvf scannet.tar.gz data/ScanNet
-```
-And this is how to extract it again.
-```bash
-tar --use-compress-program=zstd -xvf scannet.tar.gz
-```
+## 3. Training & Evaluation
 
-### ScanNet in Docker
-Run the training in the docker container as daemon**
-```bash
-docker run --gpus all --rm -dit -v $(pwd):/workspace/octformer --ipc=host --name octformer_container octformer bash -c "
-  conda info &&
-  nvidia-smi &&
-  python scripts/run_seg_scannet.py --gpu 0 --alias scannet --port 10001
-"
-```
-While the container is running in the background, you can see the logs with `docker logs -f octformer_container`.
+### ScanNet Segmentation
 
-***Note: For cleaner logs, set `SOLVER.progress_bar False` in `scripts/run_seg_scannet.py`.***
+1. **Data**: Download the data from the
+   [ScanNet benchmark](https://kaldir.vc.in.tum.de/scannet_benchmark/) like mentioned before.
+   Unzip the data and place it to the folder <scannet_folder> e.g. *data/ScanNet*. Run the following
+   command to prepare the dataset.
 
-### ScanNet200 in Docker
-**Prepare ScanNet200**
-```bash
-docker run --gpus all --rm -dit -v $(pwd):/workspace/octformer --ipc=host --name octformer_container octformer bash -c "
-  conda info &&
-  nvidia-smi &&
-  python tools/seg_scannet.py --run process_scannet --path_in data/ScanNet --path_out data/scanet200.npz  --align_axis  --scannet200
-"
-```
-**Train ScanNet200**
-```bash
-docker run --gpus all --rm -d -v $(pwd):/workspace/octformer --ipc=host --name octformer_container octformer bash -c "
-  conda info && \
-  nvidia-smi && \
-  python scripts/run_seg_scannet200.py --gpu 0 --alias scannet200
-"
-```
+    ```bash
+    python tools/seg_scannet.py --run process_scannet --path_in data/ScanNet
+    ```
+    This will generate a processed dataset into the folder *data/scannet.npz*
 
-## Custom Data
+2. **Train**: Run the following command to train the network with a single GPU and
+   port 10001. The mIoU on the validation set without voting is 74.8. The
+   training takes about 3 days on 4 Nvidia Tesla T4 GPUs which can be done with `--gpu 0,1,2,3`.
+
+    ```bash
+    python scripts/run_seg_scannet.py --gpu 0 --alias scannet --port 10001
+    ```
+
+3. **Evaluate**: Run the following command to get the per-point predictions for
+   the validation dataset with a voting strategy. And after voting, the mIoU is
+   76.3 on the validation dataset.
+
+    ```bash
+    python scripts/run_seg_scannet.py --gpu 0 --alias scannet --run validate
+    ```
+
+
+### Custom Data
 
 1. **Data**: Place the raw custom ply data with exported normals and unit meters as `.ply`
     into `data/Custom/scans_test`. Now process all those files with the following command.
@@ -148,3 +137,4 @@ docker run --gpus all --rm -d -v $(pwd):/workspace/octformer --ipc=host --name o
 
 3. **Visualize**: Export the inference results as `.ply` file with `scripts/run_seg_scannet_export.py`.
     Make sure the right alias and other parameters are set for custom dataset.
+
